@@ -1,4 +1,4 @@
-# Vercel serverless function handler - includes all backend code
+# Vercel serverless function handler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
@@ -254,5 +254,6 @@ def gallery():
         }
     ]
 
-# Create ASGI handler for Vercel
+# Export handler for Vercel
+# Vercel expects the handler to be named 'handler' or 'app'
 handler = Mangum(app, lifespan="off")
