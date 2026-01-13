@@ -2,31 +2,59 @@
 import sys
 import os
 
-# Get the absolute path to the backend directory
-# In Vercel, the file structure is: /var/task/api/index.py
+# Determine the correct paths
+# In Vercel: /var/task/api/index.py
 # Backend should be at: /var/task/backend/main.py
 current_file = os.path.abspath(__file__)
 api_dir = os.path.dirname(current_file)
 project_root = os.path.dirname(api_dir)
 backend_dir = os.path.join(project_root, 'backend')
+backend_dir = os.path.normpath(backend_dir)
+
+# Debug: Print paths (will show in Vercel logs)
+print(f"Current file: {current_file}")
+print(f"API dir: {api_dir}")
+print(f"Project root: {project_root}")
+print(f"Backend dir: {backend_dir}")
+print(f"Backend exists: {os.path.exists(backend_dir)}")
 
 # Add backend to Python path
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
+    print(f"Added {backend_dir} to sys.path")
 
-# Also add project root in case of relative imports
+# Add project root
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 try:
-    from mangum import Mangum
-    from main import app
+    # Change to backend directory to ensure relative imports work
+    original_cwd = os.getcwd()
+    if os.path.exists(backend_dir):
+        os.chdir(backend_dir)
+        print(f"Changed working directory to: {backend_dir}")
     
-    # Create ASGI handler for Vercel
+    # Import FastAPI app
+    from main import app
+    print("Successfully imported FastAPI app")
+    
+    # Change back
+    os.chdir(original_cwd)
+    
+    # Import Mangum after app is loaded
+    from mangum import Mangum
+    
+    # Create handler
     handler = Mangum(app, lifespan="off")
+    print("Mangum handler created successfully")
     
 except Exception as e:
-    # If there's an error, create a simple error handler
+    import traceback
+    error_details = traceback.format_exc()
+    print(f"ERROR importing backend: {str(e)}")
+    print(f"Traceback: {error_details}")
+    
+    # Create error handler
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
     from mangum import Mangum
@@ -35,17 +63,19 @@ except Exception as e:
     
     @error_app.get("/{path:path}")
     @error_app.post("/{path:path}")
+    @error_app.put("/{path:path}")
+    @error_app.delete("/{path:path}")
     def error_handler(path: str):
-        import traceback
         return JSONResponse(
             status_code=500,
             content={
-                "error": "Handler initialization failed",
+                "error": "Backend initialization failed",
                 "message": str(e),
                 "path": path,
                 "backend_dir": backend_dir,
                 "backend_exists": os.path.exists(backend_dir),
-                "traceback": traceback.format_exc()[:500]  # Limit traceback length
+                "sys_path_preview": sys.path[:5],
+                "traceback": error_details[:1000]
             }
         )
     
