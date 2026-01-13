@@ -6,26 +6,6 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/api/profile",
-      "destination": "/api/profile.py"
-    },
-    {
-      "source": "/api/skills",
-      "destination": "/api/skills.py"
-    },
-    {
-      "source": "/api/blog",
-      "destination": "/api/blog.py"
-    },
-    {
-      "source": "/api/resume",
-      "destination": "/api/resume.py"
-    },
-    {
-      "source": "/api/gallery",
-      "destination": "/api/gallery.py"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "/api/index.py"
     },
