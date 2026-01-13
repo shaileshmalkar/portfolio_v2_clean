@@ -1,21 +1,52 @@
 # Vercel serverless function handler for FastAPI
-from mangum import Mangum
 import sys
 import os
 
-# Add backend directory to Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-backend_dir = os.path.join(current_dir, '..', 'backend')
-backend_dir = os.path.normpath(backend_dir)
+# Get the absolute path to the backend directory
+# In Vercel, the file structure is: /var/task/api/index.py
+# Backend should be at: /var/task/backend/main.py
+current_file = os.path.abspath(__file__)
+api_dir = os.path.dirname(current_file)
+project_root = os.path.dirname(api_dir)
+backend_dir = os.path.join(project_root, 'backend')
 
+# Add backend to Python path
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 
-# Import the FastAPI app from backend
-from main import app
+# Also add project root in case of relative imports
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Create ASGI handler for Vercel serverless functions
-# Vercel routes /api/* to this handler
-# The FastAPI app has routes like /api/profile, /api/skills, etc.
-# When Vercel sends /api/profile, it should match the FastAPI route /api/profile
-handler = Mangum(app, lifespan="off")
+try:
+    from mangum import Mangum
+    from main import app
+    
+    # Create ASGI handler for Vercel
+    handler = Mangum(app, lifespan="off")
+    
+except Exception as e:
+    # If there's an error, create a simple error handler
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    from mangum import Mangum
+    
+    error_app = FastAPI()
+    
+    @error_app.get("/{path:path}")
+    @error_app.post("/{path:path}")
+    def error_handler(path: str):
+        import traceback
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Handler initialization failed",
+                "message": str(e),
+                "path": path,
+                "backend_dir": backend_dir,
+                "backend_exists": os.path.exists(backend_dir),
+                "traceback": traceback.format_exc()[:500]  # Limit traceback length
+            }
+        )
+    
+    handler = Mangum(error_app, lifespan="off")
