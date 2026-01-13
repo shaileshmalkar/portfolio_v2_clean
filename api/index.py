@@ -1,21 +1,7 @@
 # Vercel serverless function handler - includes all backend code
-import json
-
-try:
-    from fastapi import FastAPI
-    from fastapi.middleware.cors import CORSMiddleware
-    from mangum import Mangum
-except ImportError as e:
-    # If imports fail, create a minimal error handler
-    def handler(event, context):
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'error': 'Import failed',
-                'message': str(e)
-            })
-        }
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 
 # Create FastAPI app
 app = FastAPI(title="Portfolio API")
@@ -269,17 +255,4 @@ def gallery():
     ]
 
 # Create ASGI handler for Vercel
-# Use lifespan="off" to avoid async context manager issues
-try:
-    handler = Mangum(app, lifespan="off")
-except Exception as e:
-    # Fallback handler if Mangum fails
-    def handler(event, context):
-        return {
-            'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({
-                'error': 'Handler initialization failed',
-                'message': str(e)
-            })
-        }
+handler = Mangum(app, lifespan="off")
