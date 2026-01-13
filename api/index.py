@@ -1,4 +1,4 @@
-# Vercel serverless function handler for FastAPI
+# Vercel serverless function handler for FastAPI - catch-all for other API routes
 from mangum import Mangum
 import sys
 import os
